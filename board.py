@@ -28,6 +28,10 @@ class Board:
                     self.matrix[row].append('-')
 
     def kill_piece(self, row, col):
+        if self.matrix[row][col] in ('R', 'RK'):
+            self.red_left -= 1
+        elif self.matrix[row][col] in ('G', 'GK'):
+            self.gray_left -= 1
         self._validate_coordinate(row, col)
         self.matrix[row][col] = '-'
 
@@ -140,8 +144,10 @@ class Board:
             raise Exception(f'No Move For Empty Piece at: {old_row}, {old_col}')
         self.matrix[old_row][old_col], self.matrix[new_row][new_col] = self.matrix[new_row][new_col], \
             self.matrix[old_row][old_col]
-
-    # def _get_reverse_path(self, old_row, old_col, new_row, new_col):
+        killed = self.to_be_killed[(new_row, new_col)]
+        for coordinate in killed:
+            self.kill_piece(coordinate[0], coordinate[1])
+        return killed
 
     def get_piece_at(self, row, col):
         self._validate_coordinate(row, col)

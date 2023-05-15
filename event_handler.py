@@ -43,9 +43,11 @@ class EventHandler:
         return self.board.matrix[row][col] != 0
 
     def _move_piece(self, old_row, old_col, new_row, new_col):
-        self.board.move_piece(old_row, old_col, new_row, new_col)
+        killed = self.board.move_piece(old_row, old_col, new_row, new_col)
         self._redraw_piece(old_row, old_col, new_row, new_col)
         self.swap_turn()
+        for coordinate in killed:
+            self.drawer.draw_blank(coordinate[0], coordinate[1])
 
     def _redraw_piece(self, old_row, old_col, new_row, new_col):
         self.drawer.draw_piece(new_row, new_col, self.board.get_piece_color_at(new_row, new_col),
