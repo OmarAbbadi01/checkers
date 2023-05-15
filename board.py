@@ -42,7 +42,7 @@ class Board:
                 or self.matrix[row][col] in ('G', 'GK') and turn == Turn.PLAYER1:
             return valid_moves
         player = self.matrix[row][col]
-        opponent = 'G' if player == 'R' else 'R'
+        opponents = self._get_opponent(row, col)
         direction = None
         if player in ('RK', 'GK'):
             direction = Direction.BOTH
@@ -50,31 +50,70 @@ class Board:
             direction = Direction.UPWARD
         elif player == 'G':
             direction = Direction.DOWNWARD
+        valid_moves = self._get_all_moves(row, col, direction, opponents)
+        return valid_moves
 
-    def _get_downward_moves(self, row, col, opponent):
-        right, left = 1, -1
+    def _get_all_moves(self, row, col, direction, opponents):
         moves = []
-        if self._valid_down_coordinate(row + 1, col + 1):
-            
+        if direction == Direction.DOWNWARD:
+            self._get_most_deep_move(row + 1, col + 1, 1, 1, opponents, row, col, moves)
+            self._get_most_deep_move(row + 1, col - 1, 1, -1, opponents, row, col, moves)
 
-        if self._valid_down_coordinate(row + 1, col - 1):
+        elif direction == Direction.UPWARD:
+            self._get_most_deep_move(row - 1, col + 1, -1, 1, opponents, row, col, moves)
+            self._get_most_deep_move(row - 1, col - 1, -1, -1, opponents, row, col, moves)
 
-    def _valid_down_coordinate(self, row, col):
+        elif direction == Direction.BOTH:
+            self._get_most_deep_move(row + 1, col + 1, 1, 1, opponents, row, col, moves)
+            self._get_most_deep_move(row + 1, col - 1, 1, -1, opponents, row, col, moves)
+
+            self._get_most_deep_move(row - 1, col + 1, -1, 1, opponents, row, col, moves)
+            self._get_most_deep_move(row - 1, col - 1, -1, -1, opponents, row, col, moves)
+
+        return moves
+
+    def _get_most_deep_move(self, row, col, row_direction, col_direction, opponents, current_row, current_col, moves):
+        if not self._valid_coordinate(row, col):
+            return
+
+        elif self.matrix[row][col] in opponents:
+            if self.matrix[row - row_direction][col - col_direction] in opponents:
+                return
+            self._get_most_deep_move(row + row_direction, col + col_direction, row_direction, col_direction,
+                                     opponents, current_row, current_col, moves)
+
+        elif self.matrix[row][col] == '-':
+            if self.matrix[row - row_direction][col - col_direction] == '-':
+                return
+            elif row - row_direction == current_row and col - col_direction == current_col:
+                moves.append((row, col))
+                return
+            else:
+                current_move = (row, col)
+                length = len(moves)
+                self._get_most_deep_move(row + row_direction, col + col_direction, row_direction,
+                                         col_direction, opponents, current_row, current_col, moves)
+                self._get_most_deep_move(row + row_direction, col - col_direction, row_direction,
+                                         col_direction * -1, opponents, row, col, moves)
+                if len(moves) == length:
+                    moves.append(current_move)
+
+    def _valid_coordinate(self, row, col):
         return ROWS > row >= 0 and COLS > col >= 0
 
     def _get_opponent(self, row, col):
         self._validate_coordinate(row, col)
-        if self.matrix[row][col] == 'R':
-            return 'G'
-        elif self.matrix[row][col] == 'G':
-            return 'R'
+        if self.matrix[row][col] in ('R', 'RK'):
+            return 'G', 'GK'
+        elif self.matrix[row][col] in ('G', 'GK'):
+            return 'R', 'RK'
         return '-'
 
     def move_piece(self, old_row, old_col, new_row, new_col):
         self._validate_coordinate(old_row, old_col)
         self._validate_coordinate(new_row, new_col)
         if self.matrix[old_row][old_col] == '-':
-            raise Exception('No Move For Empty Piece!')
+            raise Exception(f'No Move For Empty Piece at: {old_row}, {old_col}')
         self.matrix[old_row][old_col], self.matrix[new_row][new_col] = self.matrix[new_row][new_col], \
             self.matrix[old_row][old_col]
 
