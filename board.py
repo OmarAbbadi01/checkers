@@ -1,11 +1,6 @@
-from collections import deque
-
 from model.direction import Direction
 from model.turn import Turn
 from util.constants import *
-
-
-# from model.piece import Piece
 
 
 class Board:
@@ -14,6 +9,7 @@ class Board:
         self.matrix = []
         self.gray_left = self.red_left = 12
         self.gray_kings = self.red_kings = 0
+        self.to_be_killed = {}
         self.initialize_board()
 
     def initialize_board(self):
@@ -37,6 +33,7 @@ class Board:
 
     def get_valid_moves(self, row, col, turn):
         self._validate_coordinate(row, col)
+        self.to_be_killed = {}
         valid_moves = []
         if self.matrix[row][col] in ('R', 'RK') and turn == Turn.PLAYER2 \
                 or self.matrix[row][col] in ('G', 'GK') and turn == Turn.PLAYER1:
@@ -51,28 +48,53 @@ class Board:
         elif player == 'G':
             direction = Direction.DOWNWARD
         valid_moves = self._get_all_moves(row, col, direction, opponents)
+        print(self.to_be_killed)
         return valid_moves
 
     def _get_all_moves(self, row, col, direction, opponents):
         moves = []
+        can_be_killed = []
         if direction == Direction.DOWNWARD:
-            self._get_most_deep_move(row + 1, col + 1, 1, 1, opponents, row, col, moves)
-            self._get_most_deep_move(row + 1, col - 1, 1, -1, opponents, row, col, moves)
+            self._get_most_deep_move(row + 1, col + 1, 1, 1, opponents, row, col, moves, can_be_killed)
+            can_be_killed = self._add_move_to_be_killed_dictionary(moves, can_be_killed)
+
+            self._get_most_deep_move(row + 1, col - 1, 1, -1, opponents, row, col, moves, can_be_killed)
+            can_be_killed = self._add_move_to_be_killed_dictionary(moves, can_be_killed)
 
         elif direction == Direction.UPWARD:
-            self._get_most_deep_move(row - 1, col + 1, -1, 1, opponents, row, col, moves)
-            self._get_most_deep_move(row - 1, col - 1, -1, -1, opponents, row, col, moves)
+            self._get_most_deep_move(row - 1, col + 1, -1, 1, opponents, row, col, moves, can_be_killed)
+            can_be_killed = self._add_move_to_be_killed_dictionary(moves, can_be_killed)
+
+            self._get_most_deep_move(row - 1, col - 1, -1, -1, opponents, row, col, moves, can_be_killed)
+            can_be_killed = self._add_move_to_be_killed_dictionary(moves, can_be_killed)
 
         elif direction == Direction.BOTH:
-            self._get_most_deep_move(row + 1, col + 1, 1, 1, opponents, row, col, moves)
-            self._get_most_deep_move(row + 1, col - 1, 1, -1, opponents, row, col, moves)
+            self._get_most_deep_move(row + 1, col + 1, 1, 1, opponents, row, col, moves, can_be_killed)
+            can_be_killed = self._add_move_to_be_killed_dictionary(moves, can_be_killed)
 
-            self._get_most_deep_move(row - 1, col + 1, -1, 1, opponents, row, col, moves)
-            self._get_most_deep_move(row - 1, col - 1, -1, -1, opponents, row, col, moves)
+            self._get_most_deep_move(row + 1, col - 1, 1, -1, opponents, row, col, moves, can_be_killed)
+            can_be_killed = self._add_move_to_be_killed_dictionary(moves, can_be_killed)
+
+            self._get_most_deep_move(row - 1, col + 1, -1, 1, opponents, row, col, moves, can_be_killed)
+            can_be_killed = self._add_move_to_be_killed_dictionary(moves, can_be_killed)
+
+            self._get_most_deep_move(row - 1, col - 1, -1, -1, opponents, row, col, moves, can_be_killed)
+            can_be_killed = self._add_move_to_be_killed_dictionary(moves, can_be_killed)
 
         return moves
 
-    def _get_most_deep_move(self, row, col, row_direction, col_direction, opponents, current_row, current_col, moves):
+    def _add_move_to_be_killed_dictionary(self, moves, can_be_killed):
+        if moves:
+            if moves[-1] in self.to_be_killed:
+                old_array = self.to_be_killed[moves[-1]]
+                can_be_killed.extend(old_array)
+                self.to_be_killed[moves[-1]] = can_be_killed
+            else:
+                self.to_be_killed[moves[-1]] = can_be_killed
+        return []
+
+    def _get_most_deep_move(self, row, col, row_direction, col_direction, opponents, current_row, current_col, moves,
+                            can_be_killed):
         if not self._valid_coordinate(row, col):
             return
 
@@ -80,7 +102,7 @@ class Board:
             if self.matrix[row - row_direction][col - col_direction] in opponents:
                 return
             self._get_most_deep_move(row + row_direction, col + col_direction, row_direction, col_direction,
-                                     opponents, current_row, current_col, moves)
+                                     opponents, current_row, current_col, moves, can_be_killed)
 
         elif self.matrix[row][col] == '-':
             if self.matrix[row - row_direction][col - col_direction] == '-':
@@ -89,12 +111,14 @@ class Board:
                 moves.append((row, col))
                 return
             else:
+                if self.matrix[row - row_direction][col - col_direction] in opponents:
+                    can_be_killed.append((row - row_direction, col - col_direction))
                 current_move = (row, col)
                 length = len(moves)
                 self._get_most_deep_move(row + row_direction, col + col_direction, row_direction,
-                                         col_direction, opponents, current_row, current_col, moves)
+                                         col_direction, opponents, current_row, current_col, moves, can_be_killed)
                 self._get_most_deep_move(row + row_direction, col - col_direction, row_direction,
-                                         col_direction * -1, opponents, row, col, moves)
+                                         col_direction * -1, opponents, row, col, moves, can_be_killed)
                 if len(moves) == length:
                     moves.append(current_move)
 
@@ -117,6 +141,8 @@ class Board:
         self.matrix[old_row][old_col], self.matrix[new_row][new_col] = self.matrix[new_row][new_col], \
             self.matrix[old_row][old_col]
 
+    # def _get_reverse_path(self, old_row, old_col, new_row, new_col):
+
     def get_piece_at(self, row, col):
         self._validate_coordinate(row, col)
         return self.matrix[row][col]
@@ -125,19 +151,13 @@ class Board:
         self._validate_coordinate(row, col)
         return self.matrix[row][col] != '-'
 
-    #
-    # def get_piece_color_at(self, row, col):
-    #     if not self.piece_exists_at(row, col):
-    #         raise Exception('No Color For No Piece!')
-    #     return self.matrix[row][col].color
-
     def is_piece_king(self, row, col):
         self._validate_coordinate(row, col)
         return self.matrix[row][col] == 'RK' or self.matrix[row][col] == 'GK'
 
     def _validate_coordinate(self, row, col):
         if row >= ROWS or col >= COLS or row <= -1 or col <= -1:
-            raise Exception('Invalid Coordinate!')
+            raise Exception(f'Invalid Coordinate! at: {row}, {col}')
 
     def get_piece_color_at(self, row, col):
         return PLAYER_ONE_COLOR if self.matrix[row][col] in ('R', 'RK') else PLAYER_TWO_COLOR
