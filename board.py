@@ -19,7 +19,7 @@ class Board:
                 if col % 2 == (row + 1) % 2:
                     if row <= 2:
                         self.matrix[row].append('G')  # Draw gray pieces
-                    elif row >= 5:
+                    elif row > ROWS // 2:
                         self.matrix[row].append('R')  # Draw red pieces
                     else:
                         self.matrix[row].append('-')
@@ -28,6 +28,7 @@ class Board:
                     self.matrix[row].append('-')
 
     def kill_piece(self, row, col):
+        self._validate_coordinate(row, col)
         if self.matrix[row][col] in ('R', 'RK'):
             self.red_left -= 1
         elif self.matrix[row][col] in ('G', 'GK'):
@@ -147,6 +148,7 @@ class Board:
         killed = self.to_be_killed[(new_row, new_col)]
         for coordinate in killed:
             self.kill_piece(coordinate[0], coordinate[1])
+        self._make_king_if_valid(new_row, new_col)
         return killed
 
     def get_piece_at(self, row, col):
@@ -159,7 +161,16 @@ class Board:
 
     def is_piece_king(self, row, col):
         self._validate_coordinate(row, col)
-        return self.matrix[row][col] == 'RK' or self.matrix[row][col] == 'GK'
+        return self.matrix[row][col] in ('RK', 'GK')
+
+    def _make_king_if_valid(self, row, col):
+        self._validate_coordinate(row, col)
+        if self.matrix[row][col] == 'R':
+            if row == 0:
+                self.matrix[row][col] = 'RK'
+        elif self.matrix[row][col] == 'G':
+            if row == ROWS - 1:
+                self.matrix[row][col] = 'GK'
 
     def _validate_coordinate(self, row, col):
         if row >= ROWS or col >= COLS or row <= -1 or col <= -1:
