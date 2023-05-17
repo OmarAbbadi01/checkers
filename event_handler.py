@@ -1,7 +1,10 @@
+import random
+
 import pygame
 
+from gray_player import GrayPlayer
 from model.turn import Turn
-from util.constants import SQUARE_SIZE
+from util.constants import SQUARE_SIZE, ROWS, COLS
 
 
 class EventHandler:
@@ -11,7 +14,8 @@ class EventHandler:
         self.drawer = drawer
         self.last_valid_moves = []
         self.last_clicked_piece = ()
-        self.turn = Turn.PLAYER1
+        self.turn = Turn.MIN
+        self.gray_player = GrayPlayer()
 
     def handle(self, event):
         if event.type != pygame.MOUSEBUTTONDOWN:
@@ -31,6 +35,14 @@ class EventHandler:
             self._move_piece(self.last_clicked_piece[0], self.last_clicked_piece[1], row, col)
             self.last_clicked_piece = ()
             self.last_valid_moves = []
+            # gray player turn
+            try:
+                move = self.gray_player.play(self.board.matrix)
+                old_row, old_col, new_row, new_col = move[0][0], move[0][1], move[1][0], move[1][1]
+                # self.board.get_valid_moves(old_row, old_col, Turn.MIN)
+                self._move_piece(old_row, old_col, new_row, new_col)
+            except Exception as e:
+                self._move_randomly()
 
     def _get_coordinates(self, position):
         return position[1] // SQUARE_SIZE, position[0] // SQUARE_SIZE
@@ -43,6 +55,7 @@ class EventHandler:
         return self.board.matrix[row][col] != 0
 
     def _move_piece(self, old_row, old_col, new_row, new_col):
+        self.board.get_valid_moves(old_row, old_col, self.turn)
         killed = self.board.move_piece(old_row, old_col, new_row, new_col)
         self._redraw_piece(old_row, old_col, new_row, new_col)
         self.swap_turn()
@@ -55,4 +68,18 @@ class EventHandler:
         self.drawer.draw_blank(old_row, old_col)
 
     def swap_turn(self):
-        self.turn = Turn.PLAYER1 if self.turn == Turn.PLAYER2 else Turn.PLAYER2
+        self.turn = Turn.MAX if self.turn == Turn.MIN else Turn.MIN
+
+    def _move_randomly(self):
+        valid_moves = {}
+        for row in range(ROWS):
+            for col in range(COLS):
+                if self.board.get_piece_at(row, col) in ('G', 'GK'):
+                    valid_moves[(row, col)] = self.board.get_valid_moves(row, col, self.turn)
+        keys = []
+        for key in valid_moves.keys():
+            if valid_moves[key]:
+                keys.append(key)
+        key = random.choice(keys)
+        old_row, old_col, new_row, new_col = key[0], key[1], valid_moves[key][0][0], valid_moves[key][0][1]
+        self._move_piece(old_row, old_col, new_row, new_col)

@@ -27,6 +27,9 @@ class Board:
                 else:
                     self.matrix[row].append('-')
 
+    def set_matrix(self, matrix):
+        self.matrix = matrix
+
     def kill_piece(self, row, col):
         self._validate_coordinate(row, col)
         if self.matrix[row][col] in ('R', 'RK'):
@@ -40,8 +43,8 @@ class Board:
         self._validate_coordinate(row, col)
         self.to_be_killed = {}
         valid_moves = []
-        if self.matrix[row][col] in ('R', 'RK') and turn == Turn.PLAYER2 \
-                or self.matrix[row][col] in ('G', 'GK') and turn == Turn.PLAYER1:
+        if self.matrix[row][col] in ('R', 'RK') and turn == Turn.MAX \
+                or self.matrix[row][col] in ('G', 'GK') and turn == Turn.MIN:
             return valid_moves
         player = self.matrix[row][col]
         opponents = self._get_opponent(row, col)
@@ -53,7 +56,7 @@ class Board:
         elif player == 'G':
             direction = Direction.DOWNWARD
         valid_moves = self._get_all_moves(row, col, direction, opponents)
-        print(self.to_be_killed)
+        # print(self.to_be_killed)
         return valid_moves
 
     def _get_all_moves(self, row, col, direction, opponents):

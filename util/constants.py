@@ -1,6 +1,6 @@
 import pygame
 
-WIDTH = 800
+WIDTH = 600
 HEIGHT = WIDTH
 ROWS = 8
 COLS = ROWS
@@ -20,3 +20,5 @@ BLUE = (0, 0, 255)
 DARK_GRAY = (60, 60, 60)
 
 CROWN = pygame.transform.scale(pygame.image.load('util/crown.png'), (50, 25))
+
+MAX_DEPTH = 3
